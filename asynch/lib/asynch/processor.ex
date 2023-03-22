@@ -5,11 +5,19 @@ defmodule Asynch.Processor do
 
   use GenServer
 
+  alias Asynch.Listener
+
   require Logger
+
+  defstruct operations: %{}, listeners: %{}
 
   #######
   # API #
   #######
+
+  def start_link([]) do
+    GenServer.start_link(__MODULE__, [], name: __MODULE__)
+  end
 
   def process(mod, fun, args) do
     operation_id = UUID.uuid4()
@@ -19,8 +27,16 @@ defmodule Asynch.Processor do
     operation_id
   end
 
-  def start_link([]) do
-    GenServer.start_link(__MODULE__, [], name: __MODULE__)
+  def subscribe(listener) do
+    if Listener.implements?(listener) do
+      {:ok, GenServer.call(__MODULE__, {:subscribe, listener})}
+    else
+      {:error, :invalid_listener}
+    end
+  end
+
+  def unsubscribe(subscription) when is_reference(subscription) do
+    GenServer.call(__MODULE__, {:unsubscribe, subscription})
   end
 
   #############
@@ -28,24 +44,56 @@ defmodule Asynch.Processor do
   #############
 
   def init([]) do
-    {:ok, %{}}
+    {:ok, %__MODULE__{}}
   end
 
-  def handle_cast({:process, {operation_id, mod, fun, args}}, state) do
+  def handle_call({:subscribe, listener}, _from, %__MODULE__{listeners: listeners} = state) do
+    subscription = make_ref()
+    listeners = Map.put(listeners, subscription, listener)
+
+    {:reply, subscription, %__MODULE__{state | listeners: listeners}}
+  end
+
+  def handle_call({:unsubscribe, subscription}, _from, %__MODULE__{listeners: listeners} = state) do
+    if Map.has_key?(listeners, subscription) do
+      listeners = Map.delete(listeners, subscription)
+
+      {:reply, true, %__MODULE__{state | listeners: listeners}}
+    else
+      {:reply, false, state}
+    end
+  end
+
+  def handle_cast(
+        {:process, {operation_id, mod, fun, args}},
+        %__MODULE__{operations: operations} = state
+      ) do
     task = Task.Supervisor.async_nolink(:tasks_supervisor, mod, fun, args)
     ref = task.ref
 
-    {:noreply, Map.merge(state, %{operation_id => {task, {mod, fun, args}}, ref => operation_id})}
+    operations =
+      Map.merge(operations, %{operation_id => {task, {mod, fun, args}}, ref => operation_id})
+
+    {:noreply, %__MODULE__{state | operations: operations}}
   end
 
-  def handle_info({ref, result}, state) when is_reference(ref) do
-    operation_id = Map.get(state, ref)
-    Logger.info("Result for operation #{operation_id} : #{inspect(result)}")
+  def handle_info(
+        {ref, result},
+        %__MODULE__{operations: operations, listeners: listeners} = state
+      )
+      when is_reference(ref) do
+    operation_id = Map.get(operations, ref)
+
+    listeners
+    |> Map.values()
+    |> Enum.each(fn listener ->
+      listener.on_success(operation_id, result, :not_implemented)
+    end)
 
     # Cleanup
-    state = Map.drop(state, [operation_id, ref])
+    operations = Map.drop(operations, [operation_id, ref])
 
-    {:noreply, state}
+    {:noreply, %__MODULE__{state | operations: operations}}
   end
 
   def handle_info({:DOWN, _, :process, _, :normal}, state) do
