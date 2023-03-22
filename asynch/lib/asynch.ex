@@ -13,6 +13,6 @@ defmodule Asynch do
 
   """
   def hello do
-    :world
+    {:ok, :world}
   end
 end

@@ -9,7 +9,7 @@ defmodule Asynch.Processor do
 
   require Logger
 
-  defstruct operations: %{}, listeners: %{}
+  defstruct operations: %{}
 
   #######
   # API #
@@ -35,8 +35,28 @@ defmodule Asynch.Processor do
     end
   end
 
-  def unsubscribe(subscription) when is_reference(subscription) do
+  def unsubscribe(subscription) when is_reference(subscription) or is_pid(subscription) do
     GenServer.call(__MODULE__, {:unsubscribe, subscription})
+  end
+
+  def start_or_get_topic_supervisor(topic) when is_binary(topic) do
+    {Asynch.Registry, {Asynch.Listener.Supervisor, topic}}
+    |> Registry.whereis_name()
+    |> case do
+      :undefined ->
+        name = {:via, Registry, {Asynch.Registry, {Asynch.Listener.Supervisor, topic}}}
+
+        Asynch.Supervisor.start_child(topic, name)
+
+      pid when is_pid(pid) ->
+        {:ok, pid}
+    end
+  end
+
+  def start_listener(topic, listener) when is_binary(topic) do
+    {:ok, pid} = start_or_get_topic_supervisor(topic)
+
+    {:ok, _} = Asynch.Listener.Supervisor.start_child(pid, listener, [])
   end
 
   #############
@@ -47,21 +67,16 @@ defmodule Asynch.Processor do
     {:ok, %__MODULE__{}}
   end
 
-  def handle_call({:subscribe, listener}, _from, %__MODULE__{listeners: listeners} = state) do
-    subscription = make_ref()
-    listeners = Map.put(listeners, subscription, listener)
+  def handle_call({:subscribe, listener}, _from, %__MODULE__{} = state) do
+    {:ok, subscription} = start_listener("main", listener)
 
-    {:reply, subscription, %__MODULE__{state | listeners: listeners}}
+    {:reply, subscription, state}
   end
 
-  def handle_call({:unsubscribe, subscription}, _from, %__MODULE__{listeners: listeners} = state) do
-    if Map.has_key?(listeners, subscription) do
-      listeners = Map.delete(listeners, subscription)
+  def handle_call({:unsubscribe, subscription}, _from, %__MODULE__{} = state) do
+    GenServer.cast(subscription, {:unregister, "main"})
 
-      {:reply, true, %__MODULE__{state | listeners: listeners}}
-    else
-      {:reply, false, state}
-    end
+    {:reply, true, state}
   end
 
   def handle_cast(
@@ -79,16 +94,20 @@ defmodule Asynch.Processor do
 
   def handle_info(
         {ref, result},
-        %__MODULE__{operations: operations, listeners: listeners} = state
+        %__MODULE__{operations: operations} = state
       )
       when is_reference(ref) do
     operation_id = Map.get(operations, ref)
 
-    listeners
-    |> Map.values()
-    |> Enum.each(fn listener ->
-      listener.on_success(operation_id, result, :not_implemented)
-    end)
+    Registry.dispatch(
+      Asynch.PubSub,
+      "main",
+      fn sups ->
+        Enum.each(sups, fn {pid, _} ->
+          GenServer.cast(pid, {:update, operation_id, result})
+        end)
+      end
+    )
 
     # Cleanup
     operations = Map.drop(operations, [operation_id, ref])
@@ -99,4 +118,8 @@ defmodule Asynch.Processor do
   def handle_info({:DOWN, _, :process, _, :normal}, state) do
     {:noreply, state}
   end
+
+  ###########
+  # Private #
+  ###########
 end
