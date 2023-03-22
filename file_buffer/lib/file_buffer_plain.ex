@@ -160,15 +160,3 @@ defmodule FileBuffer.Plain do
     File.write(file, buffer, [:append, :write])
   end
 end
-
-# {:ok, pid} = FileBuffer.Plain.start_link()
-
-# dt = DateTime.utc_now()
-# IO.puts("Start writing...")
-
-# for _ <- 1..20 do
-#   FileBuffer.Plain.insert_wait(pid, "hello")
-#   FileBuffer.Plain.insert_wait(pid, "goodbye")
-# end
-
-# IO.inspect(FileBuffer.Plain.info(pid))

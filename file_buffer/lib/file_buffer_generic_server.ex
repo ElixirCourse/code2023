@@ -1,5 +1,4 @@
 defmodule FileBuffer.GenericServer do
-  alias GenericServer.Implemented, as: GenericServer
   @flush_period 15_000
   @buffer_size 100
 
@@ -17,17 +16,17 @@ defmodule FileBuffer.GenericServer do
      }}
   end
 
-  def insert_wait(pid, data), 
-    do: GenericServer.call(pid, {:insert, data})
+  def insert_wait(pid, data, timeout \\ 5000),
+    do: GenericServer.call(pid, {:insert, data}, timeout)
 
   def insert_nowait(pid, data),
     do: GenericServer.cast(pid, {:insert, data})
-    
-  def info(pid), 
-    do: GenericServer.call(pid, :info)
-    
-  def insert_flush(pid),
-    do: GenericServer.call(pid, :flush)
+
+  def info(pid, timeout \\ 5000),
+    do: GenericServer.call(pid, :info, timeout)
+
+  def flush(pid, timeout \\ 5000),
+    do: GenericServer.call(pid, :flush, timeout)
 
   # handle_X functions
 
@@ -83,12 +82,12 @@ defmodule FileBuffer.GenericServer do
   defp write_to_file(buffer, file) do
     buffer = Enum.intersperse(buffer, "\n")
 
-    buffer =
-      buffer
-      |> Enum.reverse()
-      |> Enum.intersperse("\n")
+    buffer = buffer |> Enum.reverse()
 
+    # Иначе последното съобщения от предния flush и първото от
+    # текущия ще са на един ред
     buffer = if buffer == [], do: buffer, else: [buffer, "\n"]
+
     Process.sleep(100)
     File.write(file, buffer, [:append, :write])
   end
