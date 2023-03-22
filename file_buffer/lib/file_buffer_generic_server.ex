@@ -17,10 +17,17 @@ defmodule FileBuffer.GenericServer do
      }}
   end
 
-  def insert_wait(pid, data), do: GenericServer.call(pid, {:insert, data})
-  def insert_nowait(pid, data), do: GenericServer.cast(pid, {:insert, data})
-  def info(pid), do: GenericServer.call(pid, :info)
-  def insert_flush(pid), do: GenericServer.call(pid, :flush)
+  def insert_wait(pid, data), 
+    do: GenericServer.call(pid, {:insert, data})
+
+  def insert_nowait(pid, data),
+    do: GenericServer.cast(pid, {:insert, data})
+    
+  def info(pid), 
+    do: GenericServer.call(pid, :info)
+    
+  def insert_flush(pid),
+    do: GenericServer.call(pid, :flush)
 
   # handle_X functions
 
