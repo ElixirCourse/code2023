@@ -51,12 +51,15 @@ defmodule FileBuffer.Plain do
 
     receive do
       {^sender_alias, :ok} ->
+        Process.demonitor(sender_alias, [:flush])
         :ok
 
       {:DOWN, ^sender_alias, _, _, _} ->
         {:error, :process_died}
     after
-      timeout -> {:error, :timeout}
+      timeout -> 
+        Process.demonitor(sender_alias, [:flush])
+        {:error, :timeout}
     end
   end
 
@@ -67,12 +70,15 @@ defmodule FileBuffer.Plain do
 
     receive do
       {^sender_alias, info} ->
+        Process.demonitor(sender_alias, [:flush])
         {:ok, info}
 
       {:DOWN, ^sender_alias, _, _, _} ->
         {:error, :process_died}
     after
-      timeout -> {:error, :timeout}
+      timeout ->
+        Process.demonitor(sender_alias, [:flush])
+        {:error, :timeout}
     end
   end
 
