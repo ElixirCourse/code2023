@@ -9,7 +9,7 @@ defmodule Asynch do
   ## Examples
 
       iex> Asynch.hello()
-      :world
+      {:ok, :world}
 
   """
   def hello do

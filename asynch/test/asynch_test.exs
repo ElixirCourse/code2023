@@ -3,6 +3,6 @@ defmodule AsynchTest do
   doctest Asynch
 
   test "greets the world" do
-    assert Asynch.hello() == :world
+    assert Asynch.hello() == {:ok, :world}
   end
 end
