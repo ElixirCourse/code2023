@@ -9,8 +9,8 @@ defmodule ECIO.Server do
 
   @impl GenServer
   def init([init_args]) do
-    #port = Port.open({:spawn, "tty_sl -c -e"}, [:binary, :eof])
-    #send(port, [5|:unicode.characters_to_binary('hey',:utf8)])
+    # port = Port.open({:spawn, "tty_sl -c -e"}, [:binary, :eof])
+    # send(port, [5|:unicode.characters_to_binary('hey',:utf8)])
 
     {:ok, init_args}
   end
@@ -26,12 +26,12 @@ defmodule ECIO.Server do
   @impl GenServer
   def handle_info({:io_request, from, ref, request}, state) do
     case check_request(request, state) do
-      {tag, reply, new_state} when tag in [:ok, :error]->
+      {tag, reply, new_state} when tag in [:ok, :error] ->
         send_reply(from, ref, reply)
 
         {:noreply, new_state}
 
-      {:stop, reply, new_state}
+        {:stop, reply, new_state}
         send_reply(from, ref, reply)
 
         {:stop, :normal, new_state}
@@ -41,7 +41,6 @@ defmodule ECIO.Server do
   defp send_reply(from, ref, reply) do
     send(from, {:io_reply, ref, reply})
   end
-
 
   defp check_request({:put_chars, encoding, chars}, state) do
     put_chars(:unicode.characters_to_list(chars, encoding), state)
@@ -55,7 +54,6 @@ defmodule ECIO.Server do
         {:error, {:error, f}, state}
     end
   end
-
 
   defp put_chars(chars, %{ansi_format: ansi_format} = state) do
     IO.write(IO.ANSI.format(ansi_format ++ [chars]))
