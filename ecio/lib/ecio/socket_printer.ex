@@ -1,6 +1,9 @@
 defmodule ECIO.SocketPrinter do
   @moduledoc false
 
+  # For IEX
+  # Process.group_leader(self(), ECIO.Device |> Process.whereis)
+
   use GenServer
 
   @behaviour :ranch_protocol
@@ -30,9 +33,11 @@ defmodule ECIO.SocketPrinter do
   end
 
   @impl true
-  def handle_info({:tcp, socket, data}, {socket, transport} = state) do
+  def handle_info({:tcp, socket, data}, {socket, _transport} = state) do
     GenServer.cast(ECIO.Device, {:store_input, data})
-    :ok = transport.send(socket, data)
+    # :ok = transport.send(socket, data)
+    {res, _context} = Code.eval_string(data)
+    IO.puts(ECIO.Device, inspect(res))
 
     {:noreply, state}
   end
