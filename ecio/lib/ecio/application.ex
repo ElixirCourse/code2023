@@ -6,7 +6,10 @@ defmodule ECIO.Application do
   @impl true
   def start(_type, _args) do
     children = [
-      {ECIO.Server, [%{ansi_format: [:red]}]}
+      {Registry, keys: :duplicate, name: ECIO.PubSub, partitions: System.schedulers_online()},
+      {ECIO.Server, [%{ansi_format: [:red]}]},
+      {ECIO.Device, [[]]},
+      {ECIO.SocketListener, [{:port, 5556}]}
     ]
 
     opts = [strategy: :one_for_one, name: ECIO.Supervisor]

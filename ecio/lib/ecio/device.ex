@@ -35,6 +35,11 @@ defmodule ECIO.Device do
     {:noreply, state}
   end
 
+  @impl true
+  def handle_cast({:store_input, input}, state) do
+    {:noreply, %{state | input: state.input <> input}}
+  end
+
   ###########
   # Private #
   ###########
@@ -76,17 +81,11 @@ defmodule ECIO.Device do
   end
 
   defp io_request({:get_line, prompt}, state) do
-    IO.write([IO.ANSI.blue(), "From device : ", IO.ANSI.reset()])
-    input = IO.gets(prompt)
-    state = %{state | input: input}
-
     io_request({:get_line, :latin1, prompt}, state)
   end
 
   defp io_request({:get_line, encoding, prompt}, state) do
-    IO.write([IO.ANSI.red(), "From device : ", IO.ANSI.reset()])
-    input = IO.gets(prompt)
-    state = %{state | input: input}
+    put_chars(encoding, prompt, {:put_chars, encoding, prompt, :nolocal_print}, state)
 
     get_line(encoding, prompt, state)
   end
@@ -136,8 +135,24 @@ defmodule ECIO.Device do
   defp put_chars(encoding, chars, req, state) do
     case :unicode.characters_to_binary(chars, encoding, state.encoding) do
       string when is_binary(string) ->
-        IO.write([IO.ANSI.yellow(), "From device : ", IO.ANSI.reset()])
-        IO.write(string)
+        case req do
+          {:put_chars, _, _} ->
+            IO.write([IO.ANSI.yellow(), "From device : ", IO.ANSI.reset()])
+            IO.write(string)
+
+          _ ->
+            :noop
+        end
+
+        Registry.dispatch(
+          ECIO.PubSub,
+          ECIO.SocketPrinter.topic(),
+          fn sups ->
+            Enum.each(sups, fn {pid, _} ->
+              GenServer.cast(pid, {:send, string})
+            end)
+          end
+        )
 
         {:ok, %{state | output: state.output <> string}}
 
@@ -156,7 +171,6 @@ defmodule ECIO.Device do
         {error, state}
 
       {result, input} ->
-
         {result, state_after_read(state, input, prompt, 1)}
     end
   end
