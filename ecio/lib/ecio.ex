@@ -1,6 +1,6 @@
 defmodule ECIO do
   @moduledoc """
-  Documentation for `Ecio`.
+  Functions to try different IO server implementations.
   """
 
   def puts(data) do

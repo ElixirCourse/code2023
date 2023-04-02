@@ -1,8 +1,11 @@
 defmodule ECIO.SocketPrinter do
-  @moduledoc false
+  @moduledoc """
+  A very simpel ranch socket listener (every TCP connection will result in a socket listener).
+  It can be used to print and read data from telnet for example.
+  """
 
   # For IEX
-  # Process.group_leader(self(), ECIO.Device |> Process.whereis)
+  # Process.group_leader(self(), ECIO.Device |> Process.whereis())
 
   use GenServer
 

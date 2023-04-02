@@ -1,5 +1,8 @@
 defmodule ECIO.Server do
-  @moduledoc false
+  @moduledoc """
+  A simple and partial implementation of IO server to present.
+  See `ECIO.Device` for a full implementation.
+  """
 
   use GenServer
 
@@ -9,9 +12,6 @@ defmodule ECIO.Server do
 
   @impl GenServer
   def init([init_args]) do
-    # port = Port.open({:spawn, "tty_sl -c -e"}, [:binary, :eof])
-    # send(port, [5|:unicode.characters_to_binary('hey',:utf8)])
-
     {:ok, init_args}
   end
 
@@ -42,6 +42,8 @@ defmodule ECIO.Server do
     send(from, {:io_reply, ref, reply})
   end
 
+  # We can have a check_request for every type of request in `ECIO.Device` we can see them.
+  # Also the code is being translated (and changed) from here : https://www.erlang.org/doc/apps/stdlib/io_protocol.html
   defp check_request({:put_chars, encoding, chars}, state) do
     put_chars(:unicode.characters_to_list(chars, encoding), state)
   end
