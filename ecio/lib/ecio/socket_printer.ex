@@ -26,7 +26,7 @@ defmodule ECIO.SocketPrinter do
   end
 
   @impl true
-  def handle_continue(:init_socket, {ref, transport} = state) do
+  def handle_continue(:init_socket, {ref, transport}) do
     Registry.register(ECIO.PubSub, @topic, [])
 
     {:ok, socket} = :ranch.handshake(ref)
@@ -38,11 +38,34 @@ defmodule ECIO.SocketPrinter do
   @impl true
   def handle_info({:tcp, socket, data}, {socket, _transport} = state) do
     GenServer.cast(ECIO.Device, {:store_input, data})
-    # :ok = transport.send(socket, data)
-    {res, _context} = Code.eval_string(data)
-    IO.puts(ECIO.Device, inspect(res))
 
+    context = :ets.tab2list(ECIO.Context)
+    {res, new_context} = Code.eval_string(data, context)
+
+    if new_context != context do
+      :ets.insert(ECIO.Context, new_context)
+    end
+
+    IO.puts(ECIO.Device, inspect(res))
     {:noreply, state}
+  rescue
+    e in [CompileError, SyntaxError, TokenMissingError] ->
+      IO.puts(ECIO.Device, [
+        IO.ANSI.red(),
+        "Error of type #{e.__struct__}: #{e.description}",
+        IO.ANSI.reset()
+      ])
+
+      {:noreply, state}
+
+    e ->
+      IO.puts(ECIO.Device, [
+        IO.ANSI.red(),
+        "Error of type #{e.__struct__}: #{e.message}",
+        IO.ANSI.reset()
+      ])
+
+      {:noreply, state}
   end
 
   @impl true

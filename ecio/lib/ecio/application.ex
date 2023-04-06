@@ -7,6 +7,7 @@ defmodule ECIO.Application do
   def start(_type, _args) do
     children = [
       {Registry, keys: :duplicate, name: ECIO.PubSub, partitions: System.schedulers_online()},
+      ECIO.Context,
       {ECIO.Server, [%{ansi_format: [:red]}]},
       {ECIO.Device, [[]]},
       {ECIO.SocketListener, [{:port, 5556}]}
