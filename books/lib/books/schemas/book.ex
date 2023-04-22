@@ -7,9 +7,10 @@ defmodule Books.Book do
     field(:isbn, :string)
     field(:title, :string)
     field(:description, :string)
-    field(:author_name, :string)
     field(:year, :integer)
     field(:language, :string)
+
+    field(:author_name, :string, virtual: true)
 
     many_to_many(:authors, Author, join_through: "authors_books")
 

@@ -23,8 +23,23 @@ defmodule Books.RepoCase do
 
   def insert_test_books! do
     query = """
-    INSERT INTO books (isbn, title, description, author_name, year, language, inserted_at, updated_at)
-      VALUES ($1, $2, $3, $4, $5, $6, now(), now())
+    INSERT INTO countries (name, code, inserted_at, updated_at)
+      VALUES ($1, $2, now(), now()) RETURNING id
+    """
+
+    {:ok, %{rows: [[country_id]]}} = Books.Repo.query(query, ["USA", "US"])
+
+    query = """
+    INSERT INTO authors (first_name, last_name, birth_date, country_id, inserted_at, updated_at)
+      VALUES ($1, $2, $3, $4, now(), now()) RETURNING id
+    """
+
+    {:ok, %{rows: [[author_id]]}} =
+      Books.Repo.query(query, ["Стивън", "Кинг", Date.from_iso8601!("1947-09-21"), country_id])
+
+    query = """
+    INSERT INTO books (isbn, title, description, year, language, inserted_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, now(), now()) RETURNING id
     """
 
     description = """
@@ -36,15 +51,28 @@ defmodule Books.RepoCase do
     Местните жители вярват, че погребаните там могат да възкръсват…
     """
 
-    {:ok, _} =
+    {:ok, %{rows: [[book_id]]}} =
       Books.Repo.query(query, [
         "954-409-083-5",
         "Гробище за домашни любимци",
         description,
-        "Стивън Кинг",
         1993,
         "български"
       ])
+
+    query = """
+    INSERT INTO authors_books (author_id, book_id) VALUES ($1, $2)
+    """
+
+    {:ok, _} = Books.Repo.query(query, [author_id, book_id])
+
+    query = """
+    INSERT INTO authors (first_name, last_name, birth_date, country_id, inserted_at, updated_at)
+      VALUES ($1, $2, $3, $4, now(), now()) RETURNING id
+    """
+
+    {:ok, %{rows: [[author_id]]}} =
+      Books.Repo.query(query, ["Майкъл", "Крайтън", Date.from_iso8601!("1942-10-23"), country_id])
 
     description = """
     След „Юрски парк“ Майкъл Крайтън поднася поредния си бестселър „Изгряващо слънце“, чиято екранизация, подобно на „Джурасик парк“, стана събитие във филмовия свят.
@@ -52,14 +80,24 @@ defmodule Books.RepoCase do
     А вероятно българският читател ще си зададе още куп въпроси, свързани със съдбата на собствената му страна, породени от недвусмисленото послание на автора — просперитетът и престижът са несъвместими със зависимостта от нечие влияние, от нечий финансов и психологически натиск.
     """
 
-    {:ok, _} =
+    query = """
+    INSERT INTO books (isbn, title, description, year, language, inserted_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, now(), now()) RETURNING id
+    """
+
+    {:ok, %{rows: [[book_id]]}} =
       Books.Repo.query(query, [
         "954-428-058-8",
         "Изгряващо слънце",
         description,
-        "Майкъл Крайтън",
         1993,
         "български"
       ])
+
+    query = """
+    INSERT INTO authors_books (author_id, book_id) VALUES ($1, $2)
+    """
+
+    {:ok, _} = Books.Repo.query(query, [author_id, book_id])
   end
 end

@@ -3,8 +3,8 @@ defmodule Books.Repo.Migrations.AddAuthorsBooks do
 
   def change do
     create table(:authors_books) do
-      add :author_id, references(:authors), null: false
-      add :book_id, references(:books), null: false
+      add :author_id, references(:authors, on_delete: :delete_all), null: false
+      add :book_id, references(:books, on_delete: :delete_all), null: false
     end
   end
 end

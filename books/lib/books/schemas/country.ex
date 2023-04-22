@@ -17,7 +17,7 @@ defmodule Books.Country do
     |> cast(attrs, [:name, :code])
     |> validate_required([:name, :code])
     |> validate_length(:code, min: 2, max: 2)
-    |> validate_length(:name, min: 4, max: 64)
+    |> validate_length(:name, min: 2, max: 64)
     |> unique_constraint(:code)
     |> unique_constraint(:name)
     |> validate_code()
