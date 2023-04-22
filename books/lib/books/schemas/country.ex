@@ -7,6 +7,8 @@ defmodule Books.Country do
     field(:name, :string)
     field(:code, :string)
 
+    has_many(:authors, Books.Author)
+
     timestamps()
   end
 
