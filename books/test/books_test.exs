@@ -88,7 +88,7 @@ defmodule BooksTest do
         {:ok, %Books.Country{}} = Books.insert_or_get_country("USA", "US")
       end)
       |> Multi.run(:author, fn _repo, %{country: %{id: country_id}} ->
-        {:ok, %{id: author_id}} =
+        {:ok, %{id: _author_id}} =
           Books.insert_or_get_author(
             "Дан",
             "Симънс",

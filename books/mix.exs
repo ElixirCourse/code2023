@@ -23,6 +23,7 @@ defmodule Books.MixProject do
   defp deps do
     [
       {:ecto_sql, "~> 3.10"},
+      {:jason, "~> 1.3"},
       {:postgrex, ">= 0.0.0"}
     ]
   end
